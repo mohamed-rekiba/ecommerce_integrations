@@ -11,7 +11,7 @@ app_license = "GNU GPL v3.0"
 
 app_logo_url = "/assets/ecommerce_integrations/images/logo.jpeg",
 
-required_apps = ["frappe/erpnext"]
+# required_apps = ["frappe/erpnext"]
 
 permission_query_conditions = {
 	"Purchase Order": "ecommerce_integrations.events.purchase_order.get_permission_query_conditions",
