@@ -108,7 +108,8 @@ class ShopifyProduct:
 
 		return attribute
 
-	def _set_new_attribute_values(self, item_attr, values):
+	@staticmethod
+	def _set_new_attribute_values(item_attr, values):
 		for attr_value in values:
 			if not any(
 				(d.abbr.lower() == attr_value.lower() or d.attribute_value.lower() == attr_value.lower())
@@ -134,6 +135,13 @@ class ShopifyProduct:
 			"weight_per_unit": product_dict.get("weight"),
 			"default_supplier": self._get_supplier(product_dict),
 		}
+
+		if attributes:
+			for attr in attributes:
+				if attr.get("attribute") == "Color":
+					item_dict["color"] = attr.get("attribute_value")
+				elif attr.get("attribute") == "Size":
+					item_dict["size"] = attr.get("attribute_value")
 
 		integration_item_code = product_dict["id"]  # shopify product_id
 		variant_id = product_dict.get("variant_id", "")  # shopify variant_id if has variants
@@ -170,6 +178,8 @@ class ShopifyProduct:
 					"item_price": variant.get("price"),
 					"weight_unit": variant.get("weight_unit"),
 					"weight": variant.get("weight"),
+					"vendor": self._get_supplier(product_dict),
+					"image": {"src": _get_variant_image(product_dict, variant.get("image_id"))},
 				}
 
 				for i, variant_attr in enumerate(SHOPIFY_VARIANTS_ATTR_LIST):
@@ -179,7 +189,8 @@ class ShopifyProduct:
 						)
 				self._create_item(shopify_item_variant, warehouse, 0, attributes, template_item.name)
 
-	def _get_attribute_value(self, variant_attr_val, attribute):
+	@staticmethod
+	def _get_attribute_value(variant_attr_val, attribute):
 		attribute_value = frappe.db.sql(
 			"""select attribute_value from `tabItem Attribute Value`
 			where parent = %s and (abbr = %s or attribute_value = %s)""",
@@ -188,7 +199,8 @@ class ShopifyProduct:
 		)
 		return attribute_value[0][0] if len(attribute_value) > 0 else cint(variant_attr_val)
 
-	def _get_item_group(self, product_type=None):
+	@staticmethod
+	def _get_item_group(product_type=None):
 		parent_item_group = get_root_of("Item Group")
 
 		if not product_type:
@@ -229,7 +241,8 @@ class ShopifyProduct:
 		else:
 			return ""
 
-	def _get_supplier_group(self):
+	@staticmethod
+	def _get_supplier_group():
 		supplier_group = frappe.db.get_value("Supplier Group", _("Shopify Supplier"))
 		if not supplier_group:
 			supplier_group = frappe.get_doc(
@@ -263,6 +276,14 @@ def _get_item_image(product_dict):
 	return None
 
 
+def _get_variant_image(product_dict, image_id=None):
+	if product_dict.get("images"):
+		for image in product_dict.get("images"):
+			if image.get("id") == image_id:
+				return image.get("src")
+	return None
+
+
 def _match_sku_and_link_item(
 	item_dict, product_id, variant_id, variant_of=None, has_variant=False
 ) -> bool:
@@ -277,7 +298,7 @@ def _match_sku_and_link_item(
 	item_name = frappe.db.get_value("Item", {"item_code": sku})
 	if item_name:
 		try:
-			ecommerce_item = frappe.get_doc(
+			e_commerce_item = frappe.get_doc(
 				{
 					"doctype": "Ecommerce Item",
 					"integration": MODULE_NAME,
@@ -289,7 +310,7 @@ def _match_sku_and_link_item(
 				}
 			)
 
-			ecommerce_item.insert()
+			e_commerce_item.insert()
 			return True
 		except Exception:
 			return False
@@ -331,7 +352,7 @@ def upload_erpnext_item(doc, method=None):
 	updated depending on what is configured in "Shopify Setting" doctype.
 	"""
 	template_item = item = doc  # alias for readability
-	# a new item recieved from ecommerce_integrations is being inserted
+	# a new item received from ecommerce_integrations is being inserted
 	if item.flags.from_integration:
 		return
 
@@ -399,7 +420,7 @@ def upload_erpnext_item(doc, method=None):
 						}
 					)
 					try:
-						variant_attributes[f"option{i+1}"] = item.attributes[i].attribute_value
+						variant_attributes[f"option{i + 1}"] = item.attributes[i].attribute_value
 					except IndexError:
 						frappe.throw(_("Shopify Error: Missing value for attribute {}").format(attr.attribute))
 				product.variants.append(Variant(variant_attributes))
@@ -446,7 +467,7 @@ def upload_erpnext_item(doc, method=None):
 						}
 					)
 					try:
-						variant_attributes[f"option{i+1}"] = item.attributes[i].attribute_value
+						variant_attributes[f"option{i + 1}"] = item.attributes[i].attribute_value
 					except IndexError:
 						frappe.throw(_("Shopify Error: Missing value for attribute {}").format(attr.attribute))
 				product.variants.append(Variant(variant_attributes))

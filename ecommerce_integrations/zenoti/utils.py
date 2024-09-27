@@ -52,8 +52,7 @@ def make_api_call(url):
 
 
 def get_headers():
-	headers = {}
-	headers["Authorization"] = "apikey " + frappe.db.get_single_value("Zenoti Settings", "api_key")
+	headers = {"Authorization": "apikey " + frappe.db.get_single_value("Zenoti Settings", "api_key")}
 	return headers
 
 
@@ -165,8 +164,8 @@ def get_list_of_items_in_a_center(center, item_group):
 						+ "page="
 						+ str(pg)
 					)
-					pagewise_items_in_center = make_api_call(url)
-					for item in pagewise_items_in_center[item_type[item_group]]:
+					page_wise_items_in_center = make_api_call(url)
+					for item in page_wise_items_in_center[item_type[item_group]]:
 						list_of_all_items_in_center.append(item)
 
 	return list_of_all_items_in_center

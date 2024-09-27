@@ -2,6 +2,9 @@ import json
 from typing import Literal, Optional
 
 import frappe
+from ecommerce_integrations.events.sales_order import create_purchase_order
+from ecommerce_integrations.utils.purchase_order import purchase_added_for_sales_order
+from ecommerce_integrations.utils.sales_invoice import sales_invoice_for_sales_order
 from frappe import _
 from frappe.utils import cint, cstr, flt, get_datetime, getdate, nowdate
 from shopify.collection import PaginatedIterator
@@ -67,7 +70,10 @@ def create_order(order, setting, company=None):
 	so = create_sales_order(order, setting, company)
 	if so:
 		if order.get("financial_status") == "paid":
-			create_sales_invoice(order, setting, so)
+			if not sales_invoice_for_sales_order(so):
+				create_sales_invoice(order, setting, so)
+			if not purchase_added_for_sales_order(so):
+				create_purchase_order(so)
 
 		if order.get("fulfillments"):
 			create_delivery_note(order, setting, so)
@@ -117,6 +123,7 @@ def create_sales_order(shopify_order, setting, company=None):
 				"items": items,
 				"taxes": taxes,
 				"tax_category": get_dummy_tax_category(),
+				"custom_sales_status": "Confirmed" if shopify_order.get("financial_status") == "paid" else "Follow Up",
 			}
 		)
 
@@ -172,7 +179,6 @@ def get_order_items(order_items, setting, delivery_date, taxes_inclusive):
 
 
 def _get_item_price(line_item, taxes_inclusive: bool) -> float:
-
 	price = flt(line_item.get("price"))
 	qty = cint(line_item.get("quantity"))
 
@@ -353,7 +359,7 @@ def get_sales_order(order_id):
 def cancel_order(payload, request_id=None):
 	"""Called by order/cancelled event.
 
-	When shopify order is cancelled there could be many different someone handles it.
+	When shopify order is cancelled there could be much different someone handles it.
 
 	Updates document with custom field showing order status.
 
