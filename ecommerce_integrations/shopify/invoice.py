@@ -1,4 +1,7 @@
 import frappe
+from ecommerce_integrations.events.sales_order import create_purchase_order
+from ecommerce_integrations.utils.purchase_order import purchase_added_for_sales_order
+from ecommerce_integrations.utils.sales_invoice import sales_invoice_for_sales_order
 from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
 from frappe.utils import cint, cstr, getdate, nowdate
 
@@ -22,6 +25,12 @@ def prepare_sales_invoice(payload, request_id=None):
 	try:
 		sales_order = get_sales_order(cstr(order["id"]))
 		if sales_order:
+			if not purchase_added_for_sales_order(sales_order):
+				create_purchase_order(sales_order)
+
+			if not sales_invoice_for_sales_order(sales_order):
+				create_sales_invoice(order, setting, sales_order)
+
 			create_sales_invoice(order, setting, sales_order)
 			create_shopify_log(status="Success")
 		else:
@@ -52,7 +61,7 @@ def create_sales_invoice(shopify_order, setting, so):
 		sales_invoice.insert(ignore_mandatory=True)
 		sales_invoice.submit()
 		if sales_invoice.grand_total > 0:
-			make_payament_entry_against_sales_invoice(sales_invoice, setting, posting_date)
+			make_payment_entry_against_sales_invoice(sales_invoice, setting, posting_date)
 
 		if shopify_order.get("note"):
 			sales_invoice.add_comment(text=f"Order Note: {shopify_order.get('note')}")
@@ -63,7 +72,7 @@ def set_cost_center(items, cost_center):
 		item.cost_center = cost_center
 
 
-def make_payament_entry_against_sales_invoice(doc, setting, posting_date=None):
+def make_payment_entry_against_sales_invoice(doc, setting, posting_date=None):
 	from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 
 	payment_entry = get_payment_entry(doc.doctype, doc.name, bank_account=setting.cash_bank_account)

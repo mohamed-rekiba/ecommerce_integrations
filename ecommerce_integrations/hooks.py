@@ -9,97 +9,13 @@ app_color = "grey"
 app_email = "developers@frappe.io"
 app_license = "GNU GPL v3.0"
 
-# Includes in <head>
-# ------------------
+app_logo_url = "/assets/ecommerce_integrations/images/logo.jpeg",
 
-# include js, css files in header of desk.html
-# app_include_css = "/assets/ecommerce_integrations/css/ecommerce_integrations.css"
-# app_include_js = "/assets/ecommerce_integrations/js/ecommerce_integrations.js"
+required_apps = ["frappe/erpnext"]
 
-# include js, css files in header of web template
-# web_include_css = "/assets/ecommerce_integrations/css/ecommerce_integrations.css"
-# web_include_js = "/assets/ecommerce_integrations/js/ecommerce_integrations.js"
-
-# include custom scss in every website theme (without file extension ".scss")
-# website_theme_scss = "ecommerce_integrations/public/scss/website"
-
-# include js, css files in header of web form
-# webform_include_js = {"doctype": "public/js/doctype.js"}
-# webform_include_css = {"doctype": "public/css/doctype.css"}
-
-# include js in page
-# page_js = {"page" : "public/js/file.js"}
-
-# include js in doctype views
-doctype_js = {
-	"Shopify Settings": "public/js/shopify/old_settings.js",
-	"Sales Order": [
-		"public/js/unicommerce/sales_order.js",
-		"public/js/common/ecommerce_transactions.js",
-	],
-	"Sales Invoice": [
-		"public/js/unicommerce/sales_invoice.js",
-		"public/js/common/ecommerce_transactions.js",
-	],
-	"Item": "public/js/unicommerce/item.js",
-	"Stock Entry": "public/js/unicommerce/stock_entry.js",
-	"Pick List": "public/js/unicommerce/pick_list.js",
+permission_query_conditions = {
+	"Purchase Order": "ecommerce_integrations.events.purchase_order.get_permission_query_conditions",
 }
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
-# doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
-# doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
-
-# Home Pages
-# ----------
-
-# application home page (will override Website Settings)
-# home_page = "login"
-
-# website user home page (by Role)
-# role_home_page = {
-# 	"Role": "home_page"
-# }
-
-# Generators
-# ----------
-
-# automatically create page for each record of this doctype
-# website_generators = ["Web Page"]
-
-# Installation
-# ------------
-
-# before_install = "ecommerce_integrations.install.before_install"
-# after_install = "ecommerce_integrations.install.after_install"
-
-
-before_uninstall = "ecommerce_integrations.uninstall.before_uninstall"
-
-# Desk Notifications
-# ------------------
-# See frappe.core.notifications.get_notification_config
-
-# notification_config = "ecommerce_integrations.notifications.get_notification_config"
-
-# Permissions
-# -----------
-# Permissions evaluated in scripted ways
-
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
-
-# DocType Class
-# ---------------
-# Override standard doctype classes
-
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
 
 # Document Events
 # ---------------
@@ -115,8 +31,17 @@ doc_events = {
 		],
 	},
 	"Sales Order": {
-		"on_update_after_submit": "ecommerce_integrations.unicommerce.order.update_shipping_info",
+		"on_update_after_submit": [
+			"ecommerce_integrations.unicommerce.order.update_shipping_info",
+			"ecommerce_integrations.events.sales_order.on_submit"
+		],
 		"on_cancel": "ecommerce_integrations.unicommerce.status_updater.ignore_pick_list_on_sales_order_cancel",
+		"on_update": "ecommerce_integrations.events.sales_order.on_submit",
+		"autoname": "ecommerce_integrations.events.sales_order.autoname",
+	},
+	"Purchase Order": {
+		"autoname": "ecommerce_integrations.events.purchase_order.autoname",
+		"on_update": "ecommerce_integrations.events.purchase_order.on_update",
 	},
 	"Stock Entry": {
 		"validate": "ecommerce_integrations.unicommerce.grn.validate_stock_entry_for_grn",
@@ -130,6 +55,39 @@ doc_events = {
 		"on_cancel": "ecommerce_integrations.unicommerce.invoice.on_cancel",
 	},
 }
+
+# include js in doctype views
+doctype_js = {
+	"Shopify Settings": "public/js/shopify/old_settings.js",
+	"Sales Order": [
+		"public/js/unicommerce/sales_order.js",
+		"public/js/common/ecommerce_transactions.js",
+		"public/js/sales_order.js",
+	],
+	"Sales Invoice": [
+		"public/js/unicommerce/sales_invoice.js",
+		"public/js/common/ecommerce_transactions.js",
+	],
+	"Item": "public/js/unicommerce/item.js",
+	"Stock Entry": "public/js/unicommerce/stock_entry.js",
+	"Pick List": "public/js/unicommerce/pick_list.js",
+	"Purchase Order": "public/js/purchase_order.js",
+}
+
+doctype_list_js = {
+	"Sales Order": "public/js/sales_order_list.js",
+	"Purchase Order": "public/js/purchase_order_list.js",
+}
+
+before_uninstall = "ecommerce_integrations.uninstall.before_uninstall"
+
+# bootinfo - hide old doctypes
+extend_bootinfo = "ecommerce_integrations.boot.boot_session"
+
+# Testing
+# -------
+
+before_tests = "ecommerce_integrations.utils.before_test.before_tests"
 
 # Scheduled Tasks
 # ---------------
@@ -163,13 +121,84 @@ scheduler_events = {
 }
 
 
-# bootinfo - hide old doctypes
-extend_bootinfo = "ecommerce_integrations.boot.boot_session"
+fixtures = ["Role"]
 
-# Testing
-# -------
+# Includes in <head>
+# ------------------
 
-before_tests = "ecommerce_integrations.utils.before_test.before_tests"
+# include js, css files in header of desk.html
+# app_include_css = "/assets/ecommerce_integrations/css/ecommerce_integrations.css"
+# app_include_js = "/assets/ecommerce_integrations/js/ecommerce_integrations.js"
+
+# include js, css files in header of web template
+# web_include_css = "/assets/ecommerce_integrations/css/ecommerce_integrations.css"
+# web_include_js = "/assets/ecommerce_integrations/js/ecommerce_integrations.js"
+
+# include custom scss in every website theme (without file extension ".scss")
+# website_theme_scss = "ecommerce_integrations/public/scss/website"
+
+# include js, css files in header of web form
+# webform_include_js = {"doctype": "public/js/doctype.js"}
+# webform_include_css = {"doctype": "public/css/doctype.css"}
+
+# include js in page
+# page_js = {"page" : "public/js/file.js"}
+
+# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+# doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
+# doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
+
+# Home Pages
+# ----------
+
+# application home page (will override Website Settings)
+# home_page = "login"
+
+# website user home page (by Role)
+# role_home_page = {
+# 	"Role": "home_page"
+# }
+
+# Generators
+# ----------
+
+# automatically create page for each record of this doctype
+# website_generators = ["Web Page"]
+
+# Installation
+# ------------
+
+# before_install = "ecommerce_integrations.install.before_install"
+# after_install = "ecommerce_integrations.install.after_install"
+
+
+
+# Desk Notifications
+# ------------------
+# See frappe.core.notifications.get_notification_config
+
+# notification_config = "ecommerce_integrations.notifications.get_notification_config"
+
+# Permissions
+# -----------
+# Permissions evaluated in scripted ways
+
+# permission_query_conditions = {
+# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
+# }
+#
+# has_permission = {
+# 	"Event": "frappe.desk.doctype.event.event.has_permission",
+# }
+
+# DocType Class
+# ---------------
+# Override standard doctype classes
+
+# override_doctype_class = {
+# 	"ToDo": "custom_app.overrides.CustomToDo"
+# }
+
 
 # Overriding Methods
 # ------------------------------
