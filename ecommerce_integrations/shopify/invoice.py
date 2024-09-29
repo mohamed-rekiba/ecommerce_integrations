@@ -53,6 +53,7 @@ def create_sales_invoice(shopify_order, setting, so):
 		sales_invoice.set(ORDER_ID_FIELD, str(shopify_order.get("id")))
 		sales_invoice.set(ORDER_NUMBER_FIELD, shopify_order.get("name"))
 		sales_invoice.set_posting_time = 1
+		sales_invoice.currency =  shopify_order.get("currency")
 		sales_invoice.posting_date = posting_date
 		sales_invoice.due_date = posting_date
 		sales_invoice.naming_series = setting.sales_invoice_series or "SI-Shopify-"

@@ -23,7 +23,7 @@ class EcommerceCustomer:
 		else:
 			raise frappe.DoesNotExistError()
 
-	def sync_customer(self, customer_name: str, customer_group: str) -> None:
+	def sync_customer(self, customer_name: str, customer_group: str, currency:str = None) -> None:
 		"""Create customer in ERPNext if one does not exist already."""
 		customer = frappe.get_doc(
 			{
@@ -34,6 +34,7 @@ class EcommerceCustomer:
 				"customer_group": customer_group,
 				"territory": get_root_of("Territory"),
 				"customer_type": _("Individual"),
+				"default_currency": currency
 			}
 		)
 

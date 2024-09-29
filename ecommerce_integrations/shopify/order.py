@@ -117,6 +117,7 @@ def create_sales_order(shopify_order, setting, company=None):
 				"customer": customer,
 				"transaction_date": getdate(shopify_order.get("created_at")) or nowdate(),
 				"delivery_date": getdate(shopify_order.get("created_at")) or nowdate(),
+				"currency": shopify_order.get("currency"),
 				"company": setting.company,
 				"selling_price_list": get_dummy_price_list(),
 				"ignore_pricing_rule": 1,

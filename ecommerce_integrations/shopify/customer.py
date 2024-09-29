@@ -25,8 +25,9 @@ class ShopifyCustomer(EcommerceCustomer):
 		if len(customer_name.strip()) == 0:
 			customer_name = customer.get("email")
 
+		currency = customer.get('currency','')
 		customer_group = self.setting.customer_group
-		super().sync_customer(customer_name, customer_group)
+		super().sync_customer(customer_name, customer_group,currency)
 
 		billing_address = customer.get("billing_address", {}) or customer.get("default_address")
 		shipping_address = customer.get("shipping_address", {})
